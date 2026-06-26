@@ -3,55 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mehmet Alparslan AI | Trading Zekası</title>
+    <title>Mehmet Alparslan AI | Multi-Timeframe Analiz</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; text-align: center; margin: 0; padding: 20px; }
         h1 { color: #f39c12; margin-bottom: 5px; }
         .subtitle { color: #aaaaaa; font-size: 14px; margin-bottom: 30px; }
-        .container { max-width: 800px; margin: auto; }
+        .container { max-width: 1000px; margin: auto; }
         select, button { padding: 12px 20px; margin: 10px; font-size: 16px; border-radius: 6px; border: none; outline: none; }
         select { background-color: #1e1e1e; color: white; border: 1px solid #333; min-width: 200px; }
         button { background-color: #f39c12; color: #121212; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background-color: #e67e22; }
-        .result-card { background-color: #1e1e1e; padding: 25px; border-radius: 12px; margin-top: 25px; display: none; border: 1px solid #2c3e50; }
-        .prediction { font-size: 26px; font-weight: bold; margin: 15px 0; letter-spacing: 1px; }
-        .target-box { background-color: #2c3e50; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 5px solid #f39c12; font-size: 18px; font-weight: 5px; text-align: left; }
-        .backtest { background-color: #1a252f; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: left; border: 1px solid #34495e; }
-        .backtest h3 { margin-top: 0; color: #f39c12; }
-        ul { padding-left: 20px; line-height: 1.8; }
+        
+        .header-card { background-color: #1e1e1e; padding: 20px; border-radius: 12px; margin-top: 25px; border: 1px solid #2c3e50; display: none; }
+        .price-text { font-size: 22px; margin: 10px 0; }
+        
+        /* Çoklu Zaman Dilimi Izgarası */
+        .timeframes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-top: 20px; }
+        .tf-card { background-color: #1a252f; padding: 15px; border-radius: 10px; border: 1px solid #34495e; text-align: left; transition: transform 0.2s; }
+        .tf-card:hover { transform: translateY(-3px); border-color: #f39c12; }
+        .tf-title { color: #f39c12; font-weight: bold; font-size: 18px; border-bottom: 1px solid #2c3e50; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;}
+        .tf-prediction { font-size: 18px; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .tf-target { color: #f1c40f; font-size: 14px; margin-bottom: 12px; font-style: italic; }
+        .tf-backtest { font-size: 12px; color: #bdc3c7; background: #0b1014; padding: 8px; border-radius: 6px; border-left: 3px solid #3498db; }
+        
+        #loading { display: none; color: #f39c12; font-weight: bold; margin-top: 20px; font-size: 18px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Mehmet Alparslan AI</h1>
-        <div class="subtitle">5 Yıllık 15 Dakikalık Grafik Hafızası ve Dinamik Strateji Motoru</div>
+        <div class="subtitle">Zırhlı Strateji Motoru - Çoklu Zaman Dilimi Analizi</div>
         
         <select id="assetSelect">
             {% for asset in assets %}
                 <option value="{{ asset }}">{{ asset }}</option>
             {% endfor %}
         </select>
-        <button onclick="getPrediction()">Analiz Et ve Strateji Üret</button>
+        <button onclick="getPrediction()">Kapsamlı Analiz Başlat</button>
 
-        <div id="resultCard" class="result-card">
+        <div id="loading">Mehmet Alparslan AI Tüm Zaman Dilimlerini Tarıyor...</div>
+
+        <div id="headerCard" class="header-card">
             <h2 id="assetName" style="color: #f39c12; margin-top: 0;">Varlık</h2>
-            <p style="font-size: 18px;">Anlık Fiyat: <span id="currentPrice" style="font-weight: bold; color: #3498db;">0</span></p>
+            <div class="price-text">Anlık Fiyat: <span id="currentPrice" style="font-weight: bold; color: #3498db;">0</span></div>
             
-            <div id="prediction" class="prediction">TAHMİN EDİLİYOR...</div>
-            
-            <!-- Yeni Eklenen Asgari Hareket Kutusu -->
-            <div class="target-box">
-                <strong>🎯 Asgari Beklenen Hareket Mesafesi:</strong>
-                <p id="minTargetMove" style="margin: 8px 0 0 0; color: #f1c40f;"></p>
-            </div>
-            
-            <div class="backtest">
-                <h3>📉 Özel Strateji Geçmiş Backtest Performansı</h3>
-                <ul>
-                    <li>Kazanma Oranı (Win Rate): <span id="winRate" style="font-weight: bold;"></span></li>
-                    <li>Toplam Denenen İşlem Sembolü: <span id="totalTrades"></span></li>
-                    <li>Kar Faktörü (Profit Factor): <span id="profitFactor" style="font-weight: bold; color: #2ecc71;"></span></li>
-                </ul>
+            <div id="timeframesContainer" class="timeframes-grid">
+                <!-- Javascript ile kartlar buraya eklenecek -->
             </div>
         </div>
     </div>
@@ -59,31 +56,40 @@
     <script>
         async function getPrediction() {
             const symbol = document.getElementById('assetSelect').value;
-            const resultCard = document.getElementById('resultCard');
-            const predictionEl = document.getElementById('prediction');
+            const headerCard = document.getElementById('headerCard');
+            const loading = document.getElementById('loading');
+            const container = document.getElementById('timeframesContainer');
             
-            predictionEl.innerText = "Mehmet Alparslan AI Geçmiş Trendleri Tarıyor...";
-            predictionEl.style.color = "#ffffff";
-            resultCard.style.display = "block";
+            headerCard.style.display = "none";
+            loading.style.display = "block";
+            container.innerHTML = ""; // Önceki sonuçları temizle
 
             try {
                 const response = await fetch(`/api/predict/${symbol}`);
                 const data = await response.json();
 
-                document.getElementById('assetName').innerText = data.symbol + " Analiz Raporu";
+                document.getElementById('assetName').innerText = data.symbol + " Çoklu Analiz Raporu";
                 document.getElementById('currentPrice').innerText = data.current_price;
-                predictionEl.innerText = "YAPAY ZEKA KARARI: " + data.prediction;
-                predictionEl.style.color = data.color;
                 
-                // Yeni veriyi ekrana basıyoruz
-                document.getElementById('minTargetMove').innerText = data.min_target_move;
+                // Gelen her zaman dilimi için bir kart oluştur
+                data.timeframes.forEach(tf => {
+                    const card = document.createElement('div');
+                    card.className = 'tf-card';
+                    card.innerHTML = `
+                        <div class="tf-title">⏳ ${tf.timeframe}</div>
+                        <div class="tf-prediction" style="color: ${tf.color}">${tf.prediction}</div>
+                        <div class="tf-target">🎯 ${tf.target}</div>
+                        <div class="tf-backtest">📊 ${tf.backtest_summary}</div>
+                    `;
+                    container.appendChild(card);
+                });
 
-                document.getElementById('winRate').innerText = data.backtest.win_rate;
-                document.getElementById('totalTrades').innerText = data.backtest.total_trades + " işlem";
-                document.getElementById('profitFactor').innerText = data.backtest.profit_factor;
+                loading.style.display = "none";
+                headerCard.style.display = "block";
+
             } catch (error) {
-                predictionEl.innerText = "Sunucu bağlantı hatası oluştu!";
-                predictionEl.style.color = "#e74c3c";
+                loading.innerText = "Sunucu bağlantı hatası oluştu!";
+                loading.style.color = "#e74c3c";
             }
         }
     </script>
