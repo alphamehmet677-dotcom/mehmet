@@ -44,7 +44,7 @@ def generate_dynamic_strategy(symbol):
     win_rate = round(np.random.uniform(45, 99), 2)
     
     # KATI KURAL: Başarı oranı %80'in altındaysa "Stop-Buy" kuralı devreye girer!
-    if win_rate < 80.00:
+    if win_rate < 95.00:
         return {
             "symbol": symbol,
             "current_price": round(current_price, 4) if current_price < 10 else round(current_price, 2),
