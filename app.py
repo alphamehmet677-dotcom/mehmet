@@ -1,12 +1,11 @@
 from flask import Flask, render_template, jsonify
-from ai_model import fetch_data, generate_dynamic_strategy
+from ai_model import generate_dynamic_strategy
 
 app = Flask(__name__)
 
-# İzlenecek Varlıklar (20 Coin + Altın)
 ASSETS = ["BTC-USD", "ETH-USD", "BNB-USD", "XRP-USD", "SOL-USD", "ADA-USD", "DOGE-USD", 
           "TRX-USD", "DOT-USD", "MATIC-USD", "LTC-USD", "SHIB-USD", "AVAX-USD", "LINK-USD", 
-          "ATOM-USD", "XMR-USD", "UNI-USD", "BCH-USD", "XLM-USD", "ALGO-USD", "GC=F"] # GC=F Altın (XAU) temsilidir
+          "ATOM-USD", "XMR-USD", "UNI-USD", "BCH-USD", "XLM-USD", "ALGO-USD", "GC=F"] 
 
 @app.route('/')
 def home():
@@ -14,8 +13,8 @@ def home():
 
 @app.route('/api/predict/<symbol>')
 def get_prediction(symbol):
-    data = fetch_data(symbol)
-    result = generate_dynamic_strategy(data, symbol)
+    # Yapay zeka motorunu doğrudan çağırıyoruz
+    result = generate_dynamic_strategy(symbol)
     return jsonify(result)
 
 if __name__ == '__main__':
