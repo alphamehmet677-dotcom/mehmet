@@ -1,17 +1,35 @@
 import pandas as pd
 import numpy as np
 import yfinance as yf
+import requests
 
 def fetch_live_price(symbol):
-    """Yahoo Finance üzerinden anlık gerçek piyasa fiyatını çeker."""
+    """Kriptolar için Binance API, Altın için YFinance kullanarak anlık fiyat çeker."""
     try:
-        # Kripto ve Altın sembollerini yfinance formatına uyumluyoruz
-        ticker = yf.Ticker(symbol)
-        data = ticker.history(period="1d", interval="1m")
-        if not data.empty:
-            return data['Close'].iloc[-1]
-        return 0.0
-    except:
+        # 1. Kripto Paralar için Binance API (Çok hızlıdır ve sunucu engeli yemez)
+        if "USD" in symbol:
+            # BTC-USD formatını Binance'in anladığı BTCUSDT formatına çeviriyoruz
+            binance_symbol = symbol.replace("-USD", "USDT")
+            url = f"https://api.binance.com/api/v3/ticker/price?symbol={binance_symbol}"
+            response = requests.get(url, timeout=5)
+            data = response.json()
+            return float(data['price'])
+            
+        # 2. Altın (GC=F) için Yahoo Finance (Engellenmeyen fast_info metodu)
+        else:
+            ticker = yf.Ticker(symbol)
+            price = ticker.fast_info.last_price
+            if price:
+                return float(price)
+            
+            # Yedek yöntem
+            data = ticker.history(period="1d")
+            if not data.empty:
+                return float(data['Close'].iloc[-1])
+            return 0.0
+            
+    except Exception as e:
+        print(f"Hata: {symbol} fiyatı çekilemedi. Detay: {e}")
         return 0.0
 
 def generate_dynamic_strategy(symbol):
@@ -63,7 +81,7 @@ def generate_dynamic_strategy(symbol):
         "min_target_move": target_comment,
         "backtest": {
             "win_rate": f"%{win_rate}",
-            "total_trades": total_trades,
+            "total_trades": f"{total_trades} işlem",
             "profit_factor": round(np.random.uniform(2.2, 4.8), 2)
         }
     }
