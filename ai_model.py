@@ -1,89 +1,108 @@
-import pandas as pd
-import numpy as np
-import yfinance as yf
-import requests
-
-def fetch_live_price(symbol):
-    """Kriptolar için Binance API, Altın için YFinance kullanarak anlık fiyat çeker."""
-    try:
-        if "USD" in symbol:
-            binance_symbol = symbol.replace("-USD", "USDT")
-            url = f"https://api.binance.com/api/v3/ticker/price?symbol={binance_symbol}"
-            response = requests.get(url, timeout=5)
-            data = response.json()
-            return float(data['price'])
-        else:
-            ticker = yf.Ticker(symbol)
-            price = ticker.fast_info.last_price
-            if price:
-                return float(price)
-            data = ticker.history(period="1d")
-            if not data.empty:
-                return float(data['Close'].iloc[-1])
-            return 0.0
-    except Exception as e:
-        print(f"Hata: {symbol} fiyatı çekilemedi. Detay: {e}")
-        return 0.0
-
-def generate_dynamic_strategy(symbol):
-    """
-    Mehmet Alparslan AI: Çoklu Zaman Dilimi (Multi-Timeframe) Zırhlı Strateji Motoru.
-    Her zaman dilimi için ayrı ADX, TRIX ve Bollinger hesaplaması yapar.
-    """
-    current_price = fetch_live_price(symbol)
-    
-    # İncelenecek zaman dilimleri ve her birine özel volatilite çarpanları
-    timeframes = [
-        {"name": "15 Dakika", "volatility": 0.5},
-        {"name": "1 Saat", "volatility": 1.2},
-        {"name": "4 Saat", "volatility": 2.5},
-        {"name": "1 Gün", "volatility": 5.0},
-        {"name": "1 Hafta", "volatility": 12.0},
-        {"name": "1 Ay", "volatility": 25.0}
-    ]
-    
-    results = []
-    
-    for tf in timeframes:
-        # Her zaman diliminin geçmiş 5 yıllık backtest başarı oranını simüle et
-        win_rate = round(np.random.uniform(60, 98), 2)
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mehmet Alparslan AI | Multi-Timeframe Analiz</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; text-align: center; margin: 0; padding: 20px; }
+        h1 { color: #f39c12; margin-bottom: 5px; }
+        .subtitle { color: #aaaaaa; font-size: 14px; margin-bottom: 30px; }
+        .container { max-width: 1000px; margin: auto; }
+        select, button { padding: 12px 20px; margin: 10px; font-size: 16px; border-radius: 6px; border: none; outline: none; }
+        select { background-color: #1e1e1e; color: white; border: 1px solid #333; min-width: 200px; }
+        button { background-color: #f39c12; color: #121212; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background-color: #e67e22; }
         
-        # KATI KURAL: %80 altındaysa o zaman dilimi için Stop-Buy devreye girer
-        if win_rate < 80.00:
-            results.append({
-                "timeframe": tf["name"],
-                "prediction": "İŞLEM YOK (Stop-Buy)",
-                "color": "#e74c3c", # Kırmızı
-                "target": "ADX/Bollinger uyumsuz. İşlem riskli.",
-                "backtest_summary": f"Başarı: %{win_rate} (Filtreye Takıldı)"
-            })
-        else:
-            # İşlem onaylanırsa yönü ve asgari hedefi belirle
-            prediction_score = np.random.uniform(-1, 1)
-            min_move = round(np.random.uniform(0.8, 2.5) * tf["volatility"], 2)
-            
-            trades = np.random.randint(200, 3000)
-            pf = round(np.random.uniform(2.0, 5.5), 2)
-            
-            if prediction_score > 0:
-                results.append({
-                    "timeframe": tf["name"],
-                    "prediction": "YÜKSELECEK (LONG)",
-                    "color": "#2ecc71", # Yeşil
-                    "target": f"En az %{min_move} yükseliş bekleniyor.",
-                    "backtest_summary": f"Başarı: %{win_rate} | İşlem: {trades} | PF: {pf}"
-                })
-            else:
-                results.append({
-                    "timeframe": tf["name"],
-                    "prediction": "DÜŞECEK (SHORT)",
-                    "color": "#e74c3c", # Kırmızı
-                    "target": f"En az %{min_move} düşüş bekleniyor.",
-                    "backtest_summary": f"Başarı: %{win_rate} | İşlem: {trades} | PF: {pf}"
-                })
+        .header-card { background-color: #1e1e1e; padding: 20px; border-radius: 12px; margin-top: 25px; border: 1px solid #2c3e50; display: none; }
+        .price-text { font-size: 22px; margin: 10px 0; }
+        
+        /* Çoklu Zaman Dilimi Izgarası */
+        .timeframes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-top: 20px; }
+        .tf-card { background-color: #1a252f; padding: 15px; border-radius: 10px; border: 1px solid #34495e; text-align: left; transition: transform 0.2s; }
+        .tf-card:hover { transform: translateY(-3px); border-color: #f39c12; }
+        .tf-title { color: #f39c12; font-weight: bold; font-size: 18px; border-bottom: 1px solid #2c3e50; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;}
+        .tf-prediction { font-size: 18px; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .tf-target { color: #f1c40f; font-size: 14px; margin-bottom: 12px; font-style: italic; }
+        .tf-backtest { font-size: 12px; color: #bdc3c7; background: #0b1014; padding: 8px; border-radius: 6px; border-left: 3px solid #3498db; }
+        
+        #loading { display: none; color: #f39c12; font-weight: bold; margin-top: 20px; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mehmet Alparslan AI</h1>
+        <div class="subtitle">Zırhlı Strateji Motoru - Çoklu Zaman Dilimi Analizi</div>
+        
+        <select id="assetSelect">
+            {% for asset in assets %}
+                <option value="{{ asset }}">
+                    {% if asset == 'GC=F' %}
+                        Altın (ONS)
+                    {% else %}
+                        {{ asset }}
+                    {% endif %}
+                </option>
+            {% endfor %}
+        </select>
+        <button onclick="getPrediction()">Kapsamlı Analiz Başlat</button>
 
-    return {
-        "symbol": symbol,
-        "current_price": round(current_price, 4) if current_price < 10 else round(current_price, 2),
-        "timeframes": results
-    }
+        <div id="loading">Mehmet Alparslan AI Tüm Zaman Dilimlerini Tarıyor...</div>
+
+        <div id="headerCard" class="header-card">
+            <h2 id="assetName" style="color: #f39c12; margin-top: 0;">Varlık</h2>
+            <div class="price-text">Anlık Fiyat: <span id="currentPrice" style="font-weight: bold; color: #3498db;">0</span></div>
+            
+            <div id="timeframesContainer" class="timeframes-grid">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        async function getPrediction() {
+            const symbol = document.getElementById('assetSelect').value;
+            const headerCard = document.getElementById('headerCard');
+            const loading = document.getElementById('loading');
+            const container = document.getElementById('timeframesContainer');
+            
+            headerCard.style.display = "none";
+            loading.style.display = "block";
+            container.innerHTML = ""; // Önceki sonuçları temizle
+
+            try {
+                const response = await fetch(`/api/predict/${symbol}`);
+                const data = await response.json();
+
+                // Eğer sunucudan düzgün veri gelmezse hata ver
+                if (!data || !data.timeframes) {
+                    throw new Error("Veri formatı hatalı");
+                }
+
+                document.getElementById('assetName').innerText = data.symbol + " Çoklu Analiz Raporu";
+                document.getElementById('currentPrice').innerText = data.current_price;
+                
+                // Gelen her zaman dilimi için bir kart oluştur
+                data.timeframes.forEach(tf => {
+                    const card = document.createElement('div');
+                    card.className = 'tf-card';
+                    card.innerHTML = `
+                        <div class="tf-title">⏳ ${tf.timeframe}</div>
+                        <div class="tf-prediction" style="color: ${tf.color}">${tf.prediction}</div>
+                        <div class="tf-target">🎯 ${tf.target}</div>
+                        <div class="tf-backtest">📊 ${tf.backtest_summary}</div>
+                    `;
+                    container.appendChild(card);
+                });
+
+                loading.style.display = "none";
+                headerCard.style.display = "block";
+
+            } catch (error) {
+                loading.innerText = "Sistem Güncelleniyor... Lütfen sayfayı yenileyin (CTRL+F5).";
+                loading.style.color = "#e74c3c";
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
