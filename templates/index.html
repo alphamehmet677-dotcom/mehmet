@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mehmet Alparslan AI | Trading Zekası</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; text-align: center; margin: 0; padding: 20px; }
+        h1 { color: #f39c12; }
+        .container { max-width: 800px; margin: auto; }
+        select, button { padding: 10px; margin: 10px; font-size: 16px; border-radius: 5px; border: none; }
+        button { background-color: #f39c12; color: #121212; cursor: pointer; font-weight: bold; }
+        .result-card { background-color: #1e1e1e; padding: 20px; border-radius: 10px; margin-top: 20px; display: none; }
+        .prediction { font-size: 24px; font-weight: bold; margin: 10px 0; }
+        .backtest { background-color: #2c3e50; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: left;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mehmet Alparslan AI</h1>
+        <p>Son 5 yıllık veri geçmişiyle anlık strateji üreten yapay zeka.</p>
+        
+        <select id="assetSelect">
+            {% for asset in assets %}
+                <option value="{{ asset }}">{{ asset }}</option>
+            {% endfor %}
+        </select>
+        <button onclick="getPrediction()">Analiz Et</button>
+
+        <div id="resultCard" class="result-card">
+            <h2 id="assetName">Varlık Adı</h2>
+            <p>Anlık Fiyat: <span id="currentPrice">0</span></p>
+            <div id="prediction" class="prediction">TAHMİN BEKLENİYOR...</div>
+            
+            <div class="backtest">
+                <h3>📉 Mehmet Alparslan Özel Strateji Backtest Sonuçları</h3>
+                <ul>
+                    <li>Kazanma Oranı (Win Rate): <span id="winRate"></span></li>
+                    <li>Toplam İşlem: <span id="totalTrades"></span></li>
+                    <li>Kar Faktörü (Profit Factor): <span id="profitFactor"></span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function getPrediction() {
+            const symbol = document.getElementById('assetSelect').value;
+            const resultCard = document.getElementById('resultCard');
+            const predictionEl = document.getElementById('prediction');
+            
+            predictionEl.innerText = "Mehmet Alparslan Düşünüyor...";
+            predictionEl.style.color = "white";
+            resultCard.style.display = "block";
+
+            try {
+                const response = await fetch(`/api/predict/${symbol}`);
+                const data = await response.json();
+
+                document.getElementById('assetName').innerText = data.symbol;
+                document.getElementById('currentPrice').innerText = data.current_price;
+                predictionEl.innerText = data.prediction;
+                predictionEl.style.color = data.color;
+
+                document.getElementById('winRate').innerText = data.backtest.win_rate;
+                document.getElementById('totalTrades').innerText = data.backtest.total_trades;
+                document.getElementById('profitFactor').innerText = data.backtest.profit_factor;
+            } catch (error) {
+                predictionEl.innerText = "Bağlantı Hatası!";
+                predictionEl.style.color = "red";
+            }
+        }
+    </script>
+</body>
+</html>
